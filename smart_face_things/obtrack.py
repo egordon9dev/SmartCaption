@@ -21,8 +21,8 @@ if __name__ == '__main__' :
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     face_recognizer = recognizer = cv2.face.LBPHFaceRecognizer_create()
     face_shape = (32,32,3)
-    video_name = "joe_and_lex"
-    face_names = ["joe", "lex"]
+    video_name = "rock_and_kheart"
+    face_names = ["rock", "kheart"]
     faces = []
     labels = []
     for label, face_name in enumerate(face_names):
@@ -39,7 +39,7 @@ if __name__ == '__main__' :
 
 
     # Read video
-    video = cv2.VideoCapture("videos/Joe Rogan & Lex Fridman - Are Elon Musk's Fears About AI Realistic.mp4")
+    video = cv2.VideoCapture("../data/rock_and_kheart/rock_and_kheart.mp4")
     frameRate = video.get(cv2.CAP_PROP_FPS)
     # skip first 10 frames
     for i in range(10):
@@ -64,7 +64,7 @@ if __name__ == '__main__' :
     # Initialize tracker with first frame and bounding box
     # ok = tracker.init(frame, bbox)
     objects = {}
-    for frame_idx in count():
+    for frame_idx in range(900):
         # Read a new frame
         ok, frame = video.read()
 
@@ -90,7 +90,8 @@ if __name__ == '__main__' :
         fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
         areas = []
         # Draw bounding box
-        if ok and len(rects) > 0:
+        n_faces = len(rects)
+        if ok and n_faces > 0:
             # Tracking success
             # p1 = (int(bbox[0]), int(bbox[1]))
             # p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
@@ -98,18 +99,30 @@ if __name__ == '__main__' :
             for (x,y,w,h) in rects:
                 areas.append(w*h)
             face_roi = rects[np.argmax(areas)]
+            areas[np.argmax(areas)] = 0
+            face2_roi = rects[np.argmax(areas)]
             x,y,w,h = face_roi
             face = frame[y:y+h, x:x+w]
             face = process_face(face)
+            face2 = None
+            if n_faces > 1:
+                x2,y2,w2,h2 = face2_roi
+                face2 = frame[y2:y2+h2, x2:x2+w2]
+                face2 = process_face(face2)
             if save_face == True:
                 path = "faces/" + video_name + "/" + input("what do we call it?") + ".jpg"
                 print("writing face to " + path)
                 cv2.imwrite(path, face)
             face_label, confidence = face_recognizer.predict(face)
             face_class = face_names[face_label]
-            print(f"face classified as {face_class} with confidence: {confidence}")
+            if n_faces > 1:
+                face_label2, confidence2 = face_recognizer.predict(face2)
+                face_class2 = face_names[face_label2]
+            # print(f"face classified as {face_class} with confidence: {confidence}")
             cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
-            objects[frame_idx] = (face_roi, face_class, confidence)
+            if n_faces > 1:
+                cv2.rectangle(frame, (x2, y2), (x2+w2, y2+h2), (255, 0, 0), 2)
+            objects[frame_idx] = (face_roi, face_class, confidence) #, face2_roi, face_class2, confidence2)
         else :
             # Tracking failure
             cv2.putText(frame, "Tracking failure detected", (100,80), cv2.FONT_HERSHEY_SIMPLEX, 0.75,(0,0,255),2)

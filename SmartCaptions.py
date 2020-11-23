@@ -9,11 +9,12 @@ import pickle
 from collections import namedtuple
 import heapq
 import imageio
+import matplotlib.pyplot as plt
 
 Caption = namedtuple('Caption', ['character', 'message', 'startTime', 'endTime', 'comments'])
 PrioritizedCaption = namedtuple('PrioritizedCaption', ['time', 'counter', 'caption'])
 
-directory = "./data/joe_and_lex/"
+directory = "./data/rock_and_kheart/"
 
 framesDir = directory + "frames/"
 framePaths = glob.glob(framesDir + "*.jpg")
@@ -41,8 +42,12 @@ heapq.heapify(futureCaptions)
 
 
 frame_list = []
-
+confidences = []
+prev_speaker = None
+prev_roi = None
+color = (255,255,255)
 for i, path in enumerate(framePaths):
+    if i == 1800: break
     # update priority queues
     while futureCaptions and futureCaptions[0].time <= i:
         _, count, caption = heapq.heappop(futureCaptions)
@@ -61,17 +66,50 @@ for i, path in enumerate(framePaths):
             region = regionsMap[caption.character]
         else:
             captionWidth, captionHeight = TextRenderer.getCaptionSize(caption.message)
+            default_roi = (100, 100, captionWidth, captionHeight)
             if i in objects:
-                (x, y, width, height), class_name, confidence = objects[i]
-                TextRenderer.renderCaption(frame, (x, y, captionWidth, captionHeight), caption.message)
+                # ..., roi2, class2, conf2
+                roi, class1, confidence, roi2, class2, conf2 = objects[i]
+                confidences.append(confidence)
+                speaker = class1
+                if caption.comments is not None:
+                    speaker = caption.comments.strip()
+                color = (255, 80, 80) if speaker == "rock" else (80, 80, 255)
+                sel_roi = default_roi
+                if speaker == class1:
+                    sel_roi = roi
+                elif speaker == class2:
+                    sel_roi = roi2
+                if prev_speaker == speaker:
+                    damp = .01
+                    sel_roi = list(sel_roi)
+                    sel_roi[0] = int(damp * sel_roi[0] + (1-damp) * prev_roi[0])
+                    sel_roi[1] = int(damp * sel_roi[1] + (1-damp) * prev_roi[1])
+                    sel_roi[2] = int(damp * sel_roi[2] + (1-damp) * prev_roi[2])
+                    sel_roi[3] = int(damp * sel_roi[3] + (1-damp) * prev_roi[3])
+                    sel_roi = tuple(sel_roi)
+                prev_speaker = speaker
+                prev_roi = sel_roi
+                TextRenderer.renderCaption(frame, sel_roi, color, caption.message)
             else:
+                confidences.append(0)
                 # apply w/o object tracking
-                TextRenderer.renderCaption(frame, (100, 100, captionWidth, captionHeight), caption.message)
+                TextRenderer.renderCaption(frame, prev_roi, color, caption.message)
     frame_list.append(frame)
     cv2.imshow("Frame", frame[...,::-1])
     key = cv2.waitKey(1) & 0xFF
     if key == ord("q"):
         break
+
+plt.figure()
+plt.clf()
+plt.title("Facial Recognition Confidence Values")
+plt.xlabel("Time")
+plt.ylabel("Confidence")
+n_conf = len(confidences)
+confidences_avg = np.array(confidences)[:n_conf - n_conf % 30].reshape(-1, 30).mean(1)
+plt.plot(confidences_avg)
+plt.show()
 
 # ~~~~requires imageio-ffmpeg~~~~
 # given a list of frames (numpy arrays), specifically an array of size ((wxhx3)xn) where n is the number of frames,
