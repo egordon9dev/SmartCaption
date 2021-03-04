@@ -5,7 +5,9 @@ Contributers: Ethan Gordon, Jason Lee, Alex Liu, Aaditya Raghavan, Andrew Zhao
 
 [project video](https://youtu.be/yWbuJBaxGW4)
 
-## Troubleshooting
+
+
+Troubleshooting
 
 Get Frames:
 
