@@ -3,7 +3,7 @@ Captioning videos is no easy task. Automatic video captioning technology does no
 
 Contributers: Ethan Gordon, Jason Lee, Alex Liu, Aaditya Raghavan, Andrew Zhao
 
-[project video]: https://youtu.be/yWbuJBaxGW4
+[project video](https://youtu.be/yWbuJBaxGW4)
 
 ## Troubleshooting
 
